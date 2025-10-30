@@ -12,7 +12,7 @@ return new class extends Migration {
             $table->foreignId('division_id')->constrained()->cascadeOnDelete();
             $table->foreignId('home_team_id')->constrained('teams');
             $table->foreignId('away_team_id')->constrained('teams');
-            $table->date('date');
+            $table->dateTime('date');
             $table->foreignId('time_slot_id')->nullable()->constrained('time_slots');
             $table->foreignId('court_id')->nullable()->constrained('courts');
             $table->foreignId('scorekeeper_id')->nullable()->constrained('users');

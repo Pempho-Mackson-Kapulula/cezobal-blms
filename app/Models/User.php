@@ -66,4 +66,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(Team::class, 'team_manager_id');
     }
+    public function assignedGames()
+    {
+        return $this->hasMany(Game::class, 'statistician_id');
+    }
+
 }

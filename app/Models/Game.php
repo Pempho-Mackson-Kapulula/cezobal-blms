@@ -22,7 +22,7 @@ class Game extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => 'datetime',
     ];
 
     // 🔗 Relationships
@@ -56,11 +56,12 @@ class Game extends Model
     {
         return $this->belongsTo(User::class, 'scorekeeper_id');
     }
-
     public function statistician()
     {
         return $this->belongsTo(User::class, 'statistician_id');
     }
+
+
     public function players()
     {
         return $this->belongsToMany(Player::class, 'game_player');
