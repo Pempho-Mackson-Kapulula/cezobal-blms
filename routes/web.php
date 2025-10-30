@@ -12,6 +12,7 @@ use App\Livewire\Admin\ScheduleGenerator;
 use App\Livewire\Admin\ViewFixtures;
 use App\Livewire\Admin\EditFixture;
 use App\Livewire\Scorekeeper\ScorekeeperDashboard;
+use App\Livewire\Scorekeeper\ScoreInput;
 use App\Livewire\Statistician\StatisticianDashboard;
 
 Route::get('/', function () {
@@ -76,6 +77,10 @@ Route::middleware(['auth', 'can:access-statistician-dashboard'])->prefix('statis
 // Routes for scorekeepers
 Route::middleware(['auth', 'can:access-scorekeeper-dashboard'])->prefix('scorekeeper')->name('scorekeeper.')->group(function () {
     Route::get('/scorekeeper-dashboard', ScorekeeperDashboard::class)->name('dashboard');
+    //Route::get('/game/{gameId}/input', ScoreInput::class)->name('score-input');
+    Route::get('/game/{game}/input', ScoreInput::class)->name('score-input');
+
+
 });
 
 
