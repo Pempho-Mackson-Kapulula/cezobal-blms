@@ -1,0 +1,22 @@
+import { defineConfig } from 'vite';
+import laravel, { refreshPaths } from 'laravel-vite-plugin';
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.js'],
+            refresh: [
+                ...refreshPaths,
+                'app/Livewire/**',
+            ],
+        }),
+        tailwindcss(),
+    ],
+    server: {
+        host: 'cezobal-blms.test', // <-- Add this line
+        hmr: {
+            host: 'cezobal-blms.test',
+        },
+    },
+});
