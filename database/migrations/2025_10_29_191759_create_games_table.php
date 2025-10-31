@@ -17,10 +17,14 @@ return new class extends Migration {
             $table->foreignId('court_id')->nullable()->constrained('courts');
             $table->foreignId('scorekeeper_id')->nullable()->constrained('users');
             $table->foreignId('statistician_id')->nullable()->constrained('users');
-            $table->enum('status', ['scheduled', 'completed', 'canceled'])->default('scheduled');
+            
+            $table->enum('status', ['scheduled', 'in_progress', 'completed', 'canceled'])
+                  ->default('scheduled');
+
             $table->integer('score_home')->default(0);
             $table->integer('score_away')->default(0);
             $table->integer('current_period')->default(1);
+            $table->timestamp('completed_at')->nullable();
 
             $table->timestamps();
         });

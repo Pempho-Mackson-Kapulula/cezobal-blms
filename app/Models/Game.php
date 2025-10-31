@@ -19,10 +19,15 @@ class Game extends Model
         'scorekeeper_id',
         'statistician_id',
         'status',
+        'score_home',
+        'score_away',
+        'current_period',
+        'completed_at',
     ];
 
     protected $casts = [
         'date' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     // 🔗 Relationships
@@ -51,20 +56,33 @@ class Game extends Model
         return $this->belongsTo(TimeSlot::class);
     }
 
-    // Use User instead of Official for scorekeeper/statistician
     public function scorekeeper()
     {
         return $this->belongsTo(User::class, 'scorekeeper_id');
     }
+
     public function statistician()
     {
         return $this->belongsTo(User::class, 'statistician_id');
     }
-
 
     public function players()
     {
         return $this->belongsToMany(Player::class, 'game_player');
     }
 
+    // ✅ Helper: Mark game as completed/finalized
+    public function finalizeGame(): void
+    {
+        $this->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+    }
+
+    // ✅ Quick helper to check completion
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed';
+    }
 }

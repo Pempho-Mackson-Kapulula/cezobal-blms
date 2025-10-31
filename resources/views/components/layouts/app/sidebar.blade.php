@@ -23,7 +23,7 @@
                         :current="request()->routeIs('admin.*')" wire:navigate>
                         {{ __('Admin Dashboard') }}
                     </flux:navlist.item>
-                      <flux:navlist.item icon="users" :href="route('admin.user-approvals')"
+                    <flux:navlist.item icon="users" :href="route('admin.user-approvals')"
                         :current="request()->routeIs('admin.user-approvals')" wire:navigate>
                         {{ __('User Approvals') }}
                     </flux:navlist.item>
@@ -31,12 +31,16 @@
                         :current="request()->routeIs('admin.schedule-generator')" wire:navigate>
                         {{ __('Schedule Generator') }}
                     </flux:navlist.item>
-                  
+
                     <flux:navlist.item icon="calendar" :href="route('admin.view-fixtures')"
                         :current="request()->routeIs('admin.view-fixtures')" wire:navigate>
                         {{ __('View Fixtures') }}
                     </flux:navlist.item>
-                   
+
+                    <flux:navlist.item icon="chart-bar" :href="route('admin.standings')"
+                        :current="request()->routeIs('admin.standings')" wire:navigate>
+                        {{ __('Standings') }}
+                    </flux:navlist.item>
                 @endcan
 
                 {{-- Team Manager Section --}}

@@ -46,7 +46,8 @@ class ScoreInput extends Component
     public function addEvent($playerId, $eventType)
     {
         $player = Player::find($playerId);
-        if (!$player) return;
+        if (!$player)
+            return;
 
         // Record event in the database
         ScoreEvent::create([
@@ -58,10 +59,10 @@ class ScoreInput extends Component
         ]);
 
         // Calculate points
-        $points = match($eventType) {
+        $points = match ($eventType) {
             '2pt' => 2,
             '3pt' => 3,
-            'ft'  => 1,
+            'ft' => 1,
             default => 0
         };
 
@@ -78,6 +79,27 @@ class ScoreInput extends Component
 
         // Optional: handle fouls, turnovers, steals here
     }
+
+    public function finalizeGame()
+    {
+        if ($this->game->status === 'completed') {
+            return; // already finalized
+        }
+
+        // Update final scores (just to ensure DB is synced)
+        $this->game->update([
+            'score_home' => $this->homeScore,
+            'score_away' => $this->awayScore,
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        // Optionally trigger event for standings update later
+        // event(new GameFinalized($this->game));
+
+        session()->flash('message', 'Game has been finalized and scores locked.');
+    }
+
 
     public function render()
     {

@@ -12,6 +12,22 @@
             <p class="text-3xl font-extrabold text-red-500">{{ $awayScore }}</p>
         </div>
     </div>
+    <div class="mt-4 text-center">
+    @if ($game->status !== 'completed')
+        <button 
+            wire:click="finalizeGame"
+            wire:confirm="Are you sure you want to end this game? Once finalized, scores can’t be changed."
+            class="px-4 py-2 bg-red-700 hover:bg-red-800 text-white font-semibold rounded-lg shadow-md transition"
+        >
+            End Game
+        </button>
+    @else
+        <div class="text-green-500 font-semibold text-sm">
+            ✅ Game finalized at {{ $game->completed_at?->format('H:i, M j') }}
+        </div>
+    @endif
+</div>
+
 
     {{-- Main Content: Two Columns on Medium Screens and Up --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
