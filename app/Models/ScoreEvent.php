@@ -29,6 +29,6 @@ class ScoreEvent extends Model
 
     public function player()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Player::class);
     }
 }

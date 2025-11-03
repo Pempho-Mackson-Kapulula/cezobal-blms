@@ -76,9 +76,8 @@ class SchedulerService
         }
 
         // Prepare support staff (same as before)
-        $scorekeepers = User::whereIs('scorekeeper')->get();
+      
         $statisticians = User::whereIs('statistician')->get();
-        if ($scorekeepers->isEmpty()) $scorekeepers = collect([null]);
         if ($statisticians->isEmpty()) $statisticians = collect([null]);
 
         // --- SCHEDULING LOGIC ---
@@ -142,7 +141,6 @@ class SchedulerService
 
                     if ($foundMatchKey !== -1) {
                         $match = $matches[$foundMatchKey];
-                        $score = $scorekeepers[$scoreIndex % $scorekeepers->count()];
                         $stat = $statisticians[$statIndex % $statisticians->count()];
 
                         // Create the Game (booking the slot for this division)
@@ -153,7 +151,6 @@ class SchedulerService
                             'date' => $dateString,
                             'time_slot_id' => $slot->id,
                             'court_id' => $court->id,
-                            'scorekeeper_id' => $score ? $score->id : null,
                             'statistician_id' => $stat ? $stat->id : null,
                             'status' => 'scheduled',
                         ]);

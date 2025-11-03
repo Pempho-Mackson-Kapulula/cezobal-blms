@@ -44,8 +44,6 @@
                             <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-red-400">Time
                             </th>
                             <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 hidden lg:table-cell">
-                                Scorekeeper</th>
-                            <th class="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-zinc-400 hidden lg:table-cell">
                                 Statistician</th>
                             <th class="px-5 py-4"></th>
                         </tr>
@@ -74,10 +72,6 @@
                                     @else
                                         N/A
                                     @endif
-                                </td>
-
-                                <td class="px-5 py-3 whitespace-nowrap text-sm text-zinc-400 hidden lg:table-cell">
-                                    {{ $game->scorekeeper?->name ?? 'N/A' }}
                                 </td>
                                 <td class="px-5 py-3 whitespace-nowrap text-sm text-zinc-400 hidden lg:table-cell">
                                     {{ $game->statistician?->name ?? 'N/A' }}

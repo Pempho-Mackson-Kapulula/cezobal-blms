@@ -23,10 +23,12 @@
                         :current="request()->routeIs('admin.*')" wire:navigate>
                         {{ __('Admin Dashboard') }}
                     </flux:navlist.item>
+
                     <flux:navlist.item icon="users" :href="route('admin.user-approvals')"
                         :current="request()->routeIs('admin.user-approvals')" wire:navigate>
                         {{ __('User Approvals') }}
                     </flux:navlist.item>
+
                     <flux:navlist.item icon="calendar" :href="route('admin.schedule-generator')"
                         :current="request()->routeIs('admin.schedule-generator')" wire:navigate>
                         {{ __('Schedule Generator') }}
@@ -41,6 +43,12 @@
                         :current="request()->routeIs('admin.standings')" wire:navigate>
                         {{ __('Standings') }}
                     </flux:navlist.item>
+
+                    {{-- Admin Payments --}}
+                    <flux:navlist.item icon="credit-card" :href="route('admin.payments')"
+                        :current="request()->routeIs('admin.payments')" wire:navigate>
+                        {{ __('Payments') }}
+                    </flux:navlist.item>
                 @endcan
 
                 {{-- Team Manager Section --}}
@@ -49,8 +57,14 @@
                         :current="request()->routeIs('team-manager.*')" wire:navigate>
                         {{ __('Team Manager Dashboard') }}
                     </flux:navlist.item>
-                    {{-- Add other team manager-specific links here --}}
+
+                    {{-- Team Manager Payments --}}
+                    <flux:navlist.item icon="credit-card" :href="route('team-manager.payments')"
+                        :current="request()->routeIs('team-manager.payments')" wire:navigate>
+                        {{ __('Team Payments') }}
+                    </flux:navlist.item>
                 @endcan
+
 
                 {{-- Statistician Section --}}
                 @can('access-statistician-dashboard')
@@ -61,15 +75,7 @@
                     {{-- Add other statistician-specific links here --}}
                 @endcan
 
-                {{-- Scorekeeper Section --}}
-                @can('access-scorekeeper-dashboard')
-                    <flux:navlist.item icon="trophy" :href="route('scorekeeper.dashboard')"
-                        :current="request()->routeIs('scorekeeper.*')" wire:navigate>
-                        {{ __('Scorekeeper Dashboard') }}
-                    </flux:navlist.item>
-                    {{-- Add other scorekeeper-specific links here --}}
-                @endcan
-
+              
             </flux:navlist.group>
         </flux:navlist>
 

@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Silber\Bouncer\Database\HasRolesAndAbilities;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\Team;
 
 class User extends Authenticatable
 {
@@ -70,5 +71,6 @@ class User extends Authenticatable
     {
         return $this->hasMany(Game::class, 'statistician_id');
     }
+
 
 }

@@ -89,7 +89,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <option value="">{{ __('Select Role') }}</option>
             <option value="team_manager">{{ __('Team Manager') }}</option>
             <option value="statistician">{{ __('Statistician') }}</option>
-            <option value="scorekeeper">{{ __('Scorekeeper') }}</option>
         </flux:select>
 
         <!-- Password -->

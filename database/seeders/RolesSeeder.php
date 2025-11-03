@@ -32,10 +32,7 @@ class RolesSeeder extends Seeder
             'title' => 'Statistician',
         ]);
 
-        $scorekeeper = Bouncer::role()->firstOrCreate([
-            'name' => 'scorekeeper',
-            'title' => 'Scorekeeper',
-        ]);
+        
 
         // Define and assign abilities to the 'admin' role
         Bouncer::allow($admin)->to('access-admin-dashboard');
@@ -56,10 +53,7 @@ class RolesSeeder extends Seeder
         Bouncer::allow($statistician)->to('view-all-game-stats');
         Bouncer::allow($statistician)->to('edit-game-stats');
 
-        // Define and assign abilities to the 'scorekeeper' role
-        Bouncer::allow($scorekeeper)->to('access-scorekeeper-dashboard');
-        Bouncer::allow($scorekeeper)->to('record-game-scores');
-        Bouncer::allow($scorekeeper)->to('edit-game-scores');
+
 
         // Seed an admin user
         $adminUser = User::firstOrCreate(
@@ -70,23 +64,12 @@ class RolesSeeder extends Seeder
 
         // Seed a team manager user
         $teamManagerUser = User::firstOrCreate(
-            ['email' => 'team_manager@example.com'],
+            ['email' => 'manager@example.com'],
             ['name' => 'Manager', 'password' => Hash::make('12345678'), 'status' => 'active']
         );
         $teamManagerUser->assign('team_manager');
 
-        $scoreKeepers = [
-            ['name' => 'Scorekeeper 1', 'email' => 'score1@example.com'],
-            ['name' => 'Scorekeeper 2', 'email' => 'score2@example.com'],
-        ];
 
-        foreach ($scoreKeepers as $sk) {
-            $user = User::firstOrCreate(
-                ['email' => $sk['email']],
-                ['name' => $sk['name'], 'password' => Hash::make('12345678'), 'status' => 'active']
-            );
-            $user->assign('scorekeeper');
-        }
 
         // Seed statisticians
         $statisticians = [

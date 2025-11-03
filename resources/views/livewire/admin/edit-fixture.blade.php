@@ -76,19 +76,6 @@
         <div class="grid sm:grid-cols-2 gap-5">
             <div>
                 <label
-                    class="block text-sm font-semibold uppercase tracking-wider text-zinc-400 mb-2">Scorekeeper</label>
-                <select wire:model="scorekeeper_id"
-                    class="w-full rounded-xl border-2 border-zinc-700 bg-zinc-800 text-zinc-100 shadow-lg py-3 px-4
-                           focus:border-red-500 focus:ring-4 focus:ring-red-500/30 transition duration-300 ease-in-out">
-                    <option value="">Select Scorekeeper</option>
-                    @foreach ($scorekeepers as $s)
-                        <option value="{{ $s->id }}">{{ $s->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label
                     class="block text-sm font-semibold uppercase tracking-wider text-zinc-400 mb-2">Statistician</label>
                 <select wire:model="statistician_id"
                     class="w-full rounded-xl border-2 border-zinc-700 bg-zinc-800 text-zinc-100 shadow-lg py-3 px-4
