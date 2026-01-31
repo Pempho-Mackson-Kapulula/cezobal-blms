@@ -13,10 +13,17 @@ return new class extends Migration {
         Schema::create('players', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->integer('jersey_number')->nullable()->after('name');
+            // Added bio field for player profiles
+            $table->text('bio')->nullable(); 
+            
+            $table->integer('jersey_number')->nullable();
+            
+            $table->string('position')->nullable(); 
+            
             $table->foreignId('team_id')->constrained()->onDelete('cascade');
-            $table->string('position')->nullable();
-            $table->integer('fouls')->default(0);
+            
+            $table->integer('fouls')->default(0); 
+            
             $table->timestamps();
         });
 

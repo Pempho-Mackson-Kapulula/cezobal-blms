@@ -7,74 +7,66 @@ use App\Models\Team;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Http\UploadedFile;
 
 class CreateForm extends Component
 {
     use WithFileUploads;
 
     public string $name = '';
-    public ?string $coach_name = null;
-    public ?string $bio = null;
+    public ?string $coach_name = '';
+    public ?string $bio = '';
     public ?int $division_id = null;
-    public ?UploadedFile $logo_path = null;
-    public $divisions;
+    public $logo_path;
 
-    public function mount()
-    {
-        // Load divisions for the select dropdown
-        $this->divisions = Division::all();
-    }
+    protected $rules = [
+        'name' => 'required|string|min:3|max:255|unique:teams,name',
+        'coach_name' => 'nullable|string|min:3|max:255',
+        'bio' => 'nullable|string|max:1000',
+        'division_id' => 'required|exists:divisions,id',
+        'logo_path' => 'nullable|image|max:2048',
+    ];
 
     public function createTeam()
     {
-        $validatedData = $this->validate([
-            'name' => 'required|string|min:3|max:255|unique:teams,name',
-            'coach_name' => 'nullable|string|min:3|max:255',
-            'bio' => 'nullable|string|max:1000',
-            'division_id' => 'required|integer|exists:divisions,id',
-            'logo_path' => 'nullable|image|max:2048',
-        ]);
+        // This will now throw an exception if validation fails, 
+        // which helps in identifying hidden issues.
+        $this->validate();
 
         $user = Auth::user();
 
-        if (!$user) {
-            session()->flash('error', 'You must be logged in to create a team.');
-            return;
-        }
-
-        if ($user->team) {
-            session()->flash('error', 'You already have a team.');
+        if (!$user || $user->team) {
+            session()->flash('error', 'Unauthorized or team already exists.');
             return;
         }
 
         try {
-            $logoPath = $this->logo_path ? $this->logo_path->store('teams', 'public') : null;
+            $logoUrl = $this->logo_path
+                ? $this->logo_path->store('teams', 'public')
+                : null;
 
             Team::create([
                 'team_manager_id' => $user->id,
-                'division_id' => $validatedData['division_id'],
-                'name' => $validatedData['name'],
-                'coach_name' => $validatedData['coach_name'] ?? null,
-                'bio' => $validatedData['bio'] ?? null,
-                'logo_path' => $logoPath,
-                'home_court_id' => 1, // Temp default, replace with real selection later
+                'division_id' => $this->division_id,
+                'name' => $this->name,
+                'coach_name' => $this->coach_name,
+                'bio' => $this->bio,
+                'logo_path' => $logoUrl,
+                'home_court_id' => 1,
             ]);
 
-            session()->flash('message', 'Team created successfully.');
-            $this->dispatch('team-created');
+            session()->flash('message', 'Team created successfully!');
+            return redirect()->route('team-manager.dashboard');
+
         } catch (\Exception $e) {
-            logger()->error('Team creation failed: ' . $e->getMessage(), [
-                'user_id' => $user->id,
-                'validatedData' => $validatedData,
-            ]);
-
-            session()->flash('error', 'Error creating team: ' . $e->getMessage());
+            // Log the error for you to see in the browser if it fails
+            session()->flash('error', 'System Error: ' . $e->getMessage());
         }
     }
 
     public function render()
     {
-        return view('livewire.team-manager.create-form');
+        return view('livewire.team-manager.create-form', [
+            'divisions' => Division::all()
+        ]);
     }
 }

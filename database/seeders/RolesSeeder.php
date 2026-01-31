@@ -37,16 +37,12 @@ class RolesSeeder extends Seeder
         // Define and assign abilities to the 'admin' role
         Bouncer::allow($admin)->to('access-admin-dashboard');
         Bouncer::allow($admin)->toManage(User::class);
-        //Bouncer::allow($admin)->toManage(Team::class);
-        //Bouncer::allow($admin)->toManage(Game::class);
-        // You can use ->everything() for broad permissions
-        // Bouncer::allow($admin)->everything();
+        Bouncer::allow($admin)->to('approve-users');
+     
 
         // Define and assign abilities to the 'team_manager' role
         Bouncer::allow($teamManager)->to('access-team-manager-dashboard');
-        //Bouncer::allow($teamManager)->toOwn(Team::class)->to('view');
-        //Bouncer::allow($teamManager)->toOwn(Team::class)->to('update');
-        //Bouncer::allow($teamManager)->toOwn(Team::class)->to('manage-players');
+   
 
         // Define and assign abilities to the 'statistician' role
         Bouncer::allow($statistician)->to('access-statistician-dashboard');
@@ -58,14 +54,14 @@ class RolesSeeder extends Seeder
         // Seed an admin user
         $adminUser = User::firstOrCreate(
             ['email' => 'admin@example.com'],
-            ['name' => 'Admin User', 'password' => Hash::make('12345678'), 'status' => 'active']
+            ['name' => 'Admin User', 'password' => Hash::make('1234qwer'), 'status' => 'active']
         );
         $adminUser->assign('admin');
 
         // Seed a team manager user
         $teamManagerUser = User::firstOrCreate(
             ['email' => 'manager@example.com'],
-            ['name' => 'Manager', 'password' => Hash::make('12345678'), 'status' => 'active']
+            ['name' => 'Manager', 'password' => Hash::make('1234rewq'), 'status' => 'active']
         );
         $teamManagerUser->assign('team_manager');
 
@@ -80,7 +76,7 @@ class RolesSeeder extends Seeder
         foreach ($statisticians as $stat) {
             $user = User::firstOrCreate(
                 ['email' => $stat['email']],
-                ['name' => $stat['name'], 'password' => Hash::make('12345678'), 'status' => 'active']
+                ['name' => $stat['name'], 'password' => Hash::make('1234rewq'), 'status' => 'active']
             );
             $user->assign('statistician');
         }

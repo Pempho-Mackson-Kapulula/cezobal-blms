@@ -1,208 +1,392 @@
 <?php
 
+
+
 namespace App\Livewire\Statistician;
 
+
+
 use Livewire\Component;
-use App\Models\Game;
-use App\Models\Player;
-use App\Models\ScoreEvent;
+
+use App\Models\{Game, Player, ScoreEvent};
+
+use Livewire\Attributes\Computed;
+
+use Illuminate\Support\Facades\DB;
+
 use Illuminate\Support\Collection;
+
+
 
 class StatInput extends Component
 {
-    public Game $game;
-    public $isLocked = false;
 
-    public Collection $homePlayers;
-    public Collection $awayPlayers;
+    public Game $game;
+
+    public bool $isLocked = false;
+
+    public $lastActionId = null;
 
     public int $period = 1;
-    public int $homeScore = 0;
-    public int $awayScore = 0;
 
-    public $homePlayerStats = [];
-    public $awayPlayerStats = [];
-    public $teamTotals = [];
+    public bool $showBoxscore = false;
 
-    protected $listeners = [
-        'refreshScoreboard' => 'refreshScores',
-    ];
+
+
+    // NEW: Tracks which on-court player is being replaced
+
+    public $swappingPlayerId = null;
+
+
+
+    public array $onCourtIds = [];
+
+
+
+    const MAX_PLAYER_FOULS = 5;
+
+    const REGULAR_PERIODS = 4;
+
+
 
     public function mount(Game $game)
     {
-        $this->loadGame($game->id);
+
+        $this->game = $game;
+
+        $this->isLocked = $game->status === 'completed';
+
+        $this->period = $game->current_period ?? 1;
+
+
+
+        // Auto-initialize with first 5 players from each team if not set
+
+        $this->onCourtIds = array_merge(
+
+            $this->game->homeTeam->players->take(5)->pluck('id')->toArray(),
+
+            $this->game->awayTeam->players->take(5)->pluck('id')->toArray()
+
+        );
+
     }
 
-    protected function loadGame($gameId)
+    public function initiateSwap($outPlayerId)
     {
-        $this->game = Game::with(['homeTeam.players', 'awayTeam.players'])->findOrFail($gameId);
-        $this->isLocked = $this->game->status === 'completed';
-        $this->homePlayers = $this->game->homeTeam?->players ?? collect();
-        $this->awayPlayers = $this->game->awayTeam?->players ?? collect();
-        $this->homeScore = $this->game->score_home ?? 0;
-        $this->awayScore = $this->game->score_away ?? 0;
-        $this->computeStats();
+
+        $this->swappingPlayerId = $outPlayerId;
+
     }
 
-    public function addShot($playerId, $type, $made)
+
+
+    public function confirmSwap($inPlayerId)
     {
-        if ($this->isLocked) return;
+        if (!$this->swappingPlayerId)
+            return;
 
-        $player = Player::findOrFail($playerId);
+        $outPlayer = Player::find($this->swappingPlayerId);
+        $inPlayer = Player::find($inPlayerId);
 
-        $eventType = match($type) {
-            '2fg' => $made ? '2pt' : '2pt_attempt',
-            '3pt' => $made ? '3pt' : '3pt_attempt',
-            'ft'  => $made ? 'ft' : 'ft_attempt',
-            default => null,
-        };
-
-        if (!$eventType) return;
-
-        ScoreEvent::create([
-            'player_id' => $player->id,
-            'team_id' => $player->team_id,
-            'game_id' => $this->game->id,
-            'event_type' => $eventType,
-            'period' => $this->period,
-        ]);
-
-        // Update scoreboard
-        $points = match($eventType) {
-            '2pt' => 2,
-            '3pt' => 3,
-            'ft'  => 1,
-            default => 0
-        };
-
-        if ($points > 0) {
-            if ($player->team_id === $this->game->home_team_id) {
-                $this->homeScore += $points;
-                $this->game->increment('score_home', $points);
-            } else {
-                $this->awayScore += $points;
-                $this->game->increment('score_away', $points);
-            }
+        // Guard: Ensure both players exist and belong to the same team
+        if (!$outPlayer || !$inPlayer || $outPlayer->team_id !== $inPlayer->team_id) {
+            session()->flash('error', 'Substitution must be between players of the same team.');
+            $this->swappingPlayerId = null;
+            return;
         }
 
-        $this->computeStats();
-        $this->dispatch('refreshScoreboard', ['gameId' => $this->game->id]);
+        // Remove old player, add new player
+        $this->onCourtIds = array_diff($this->onCourtIds, [$this->swappingPlayerId]);
+        $this->onCourtIds[] = $inPlayerId;
+
+        $this->swappingPlayerId = null;
+        session()->flash('message', 'Substitution complete.');
     }
 
-    public function addStat($playerId, $stat)
+
+
+    public function cancelSwap()
     {
-        if ($this->isLocked) return;
 
-        $player = Player::findOrFail($playerId);
+        $this->swappingPlayerId = null;
 
-        ScoreEvent::create([
-            'player_id' => $player->id,
-            'team_id' => $player->team_id,
-            'game_id' => $this->game->id,
-            'event_type' => $stat,
-            'period' => $this->period,
-        ]);
-
-        $this->computeStats();
-        $this->dispatch('refreshScoreboard', ['gameId' => $this->game->id]);
     }
 
-    protected function computeStats()
-    {
-        $this->homePlayerStats = [];
-        $this->awayPlayerStats = [];
 
-        foreach ($this->homePlayers as $player) {
-            $this->homePlayerStats[$player->id] = $this->aggregateStats($player->id);
+
+    // --- COMPUTED PROPERTIES ---
+
+    #[Computed]
+
+    public function periodLabel(): string
+    {
+
+        if ($this->period <= self::REGULAR_PERIODS) {
+
+            return "P{$this->period}";
+
         }
 
-        foreach ($this->awayPlayers as $player) {
-            $this->awayPlayerStats[$player->id] = $this->aggregateStats($player->id);
-        }
 
-        $this->computeTeamTotals();
+
+        $otCount = $this->period - self::REGULAR_PERIODS;
+
+        return $otCount === 1 ? 'OT' : "{$otCount}OT";
+
     }
 
-    protected function computeTeamTotals()
-    {
-        $this->teamTotals = [];
 
-        foreach (['homeTeam', 'awayTeam'] as $side) {
-            $team = $this->game->$side;
-            $totals = [
-                '2fg_made'=>0,'2fg_attempt'=>0,'3pt_made'=>0,'3pt_attempt'=>0,
-                'fg_made'=>0,'fg_attempt'=>0,'ft_made'=>0,'ft_attempt'=>0,
-                'reb'=>0,'ast'=>0,'stl'=>0,'blk'=>0,'to'=>0,'pf'=>0,'pts'=>0
+
+    #[Computed]
+
+    public function homePlayers()
+    {
+
+        return Player::where('team_id', $this->game->home_team_id)->get();
+
+    }
+
+
+
+    #[Computed]
+
+    public function awayPlayers()
+    {
+
+        return Player::where('team_id', $this->game->away_team_id)->get();
+
+    }
+
+
+
+    #[Computed]
+
+    public function stats(): Collection
+    {
+
+        return ScoreEvent::where('game_id', $this->game->id)
+
+            ->select('player_id', 'event_type', DB::raw('count(*) as count'))
+
+            ->groupBy('player_id', 'event_type')
+
+            ->get()
+
+            ->groupBy('player_id');
+
+    }
+
+
+
+    #[Computed]
+
+    public function teamFouls(): Collection
+    {
+
+        return ScoreEvent::where('game_id', $this->game->id)
+
+            ->where('event_type', 'pf')
+
+            ->where('period', $this->period)
+
+            ->select('team_id', DB::raw('count(*) as count'))
+
+            ->groupBy('team_id')
+
+            ->pluck('count', 'team_id');
+
+    }
+
+
+
+    #[Computed]
+
+    public function teamStats(): array
+    {
+
+        $allEvents = ScoreEvent::where('game_id', $this->game->id)->get();
+
+        $calc = function ($teamId) use ($allEvents) {
+
+            $t = $allEvents->where('team_id', $teamId);
+
+            $m2 = $t->where('event_type', '2pt')->count();
+
+            $a2 = $t->where('event_type', '2pt_attempt')->count() + $m2;
+
+            $m3 = $t->where('event_type', '3pt')->count();
+
+            $a3 = $t->where('event_type', '3pt_attempt')->count() + $m3;
+
+            return [
+
+                'reb' => $t->where('event_type', 'reb')->count(),
+
+                'ast' => $t->where('event_type', 'ast')->count(),
+
+                'fg_percent' => ($a2 + $a3) > 0 ? round((($m2 + $m3) / ($a2 + $a3)) * 100) : 0,
+
             ];
 
-            foreach ($team->players as $player) {
-                $stats = $side === 'homeTeam' ? $this->homePlayerStats[$player->id] : $this->awayPlayerStats[$player->id];
+        };
 
-                foreach ($totals as $key => $_) {
-                    $totals[$key] += $stats[$key] ?? 0;
-                }
-            }
+        return ['home' => $calc($this->game->home_team_id), 'away' => $calc($this->game->away_team_id)];
 
-            $totals['fg_made'] = $totals['2fg_made'] + $totals['3pt_made'];
-            $totals['fg_attempt'] = $totals['2fg_attempt'] + $totals['3pt_attempt'];
-            $totals['pts'] = $totals['2fg_made']*2 + $totals['3pt_made']*3 + $totals['ft_made'];
-
-            $this->teamTotals[$side] = $totals;
-        }
     }
 
-    protected function aggregateStats($playerId)
+
+
+    // --- ACTIONS ---
+
+
+
+    public function addShot(int $playerId, string $type, bool $made)
     {
-        $events = ScoreEvent::where('player_id', $playerId)
-            ->where('game_id', $this->game->id)
-            ->get();
 
-        $stats = [
-            '2fg_made'=>0,'2fg_attempt'=>0,'3pt_made'=>0,'3pt_attempt'=>0,
-            'fg_made'=>0,'fg_attempt'=>0,'ft_made'=>0,'ft_attempt'=>0,
-            'reb'=>0,'ast'=>0,'stl'=>0,'blk'=>0,'to'=>0,'pf'=>0,'pts'=>0
-        ];
+        if ($this->isLocked)
 
-        foreach ($events as $event) {
-            switch($event->event_type){
-                case '2pt': $stats['2fg_made']++; $stats['2fg_attempt']++; $stats['pts']+=2; break;
-                case '2pt_attempt': $stats['2fg_attempt']++; break;
-                case '3pt': $stats['3pt_made']++; $stats['3pt_attempt']++; $stats['pts']+=3; break;
-                case '3pt_attempt': $stats['3pt_attempt']++; break;
-                case 'ft': $stats['ft_made']++; $stats['ft_attempt']++; $stats['pts']+=1; break;
-                case 'ft_attempt': $stats['ft_attempt']++; break;
-                case 'reb': $stats['reb']++; break;
-                case 'ast': $stats['ast']++; break;
-                case 'stl': $stats['stl']++; break;
-                case 'blk': $stats['blk']++; break;
-                case 'to': $stats['to']++; break;
-                case 'pf': $stats['pf']++; break;
-            }
+            return;
+
+        $event = match ($type) {
+
+            '2fg' => $made ? '2pt' : '2pt_attempt',
+
+            '3pt' => $made ? '3pt' : '3pt_attempt',
+
+            'ft' => $made ? 'ft' : 'ft_attempt',
+
+            default => null,
+
+        };
+        if ($event)
+            $this->recordEvent($playerId, $event);
+
+    }
+    public function addStat(int $playerId, string $stat)
+    {
+        if ($this->isLocked || ($this->isDisqualified($playerId) && $stat !== 'pf')) {
+            session()->flash('error', 'Player is disqualified.');
+            return;
         }
 
-        $stats['fg_made'] = $stats['2fg_made'] + $stats['3pt_made'];
-        $stats['fg_attempt'] = $stats['2fg_attempt'] + $stats['3pt_attempt'];
+        if ($this->isLocked)
 
-        return $stats;
+            return;
+
+        if ($stat === 'pf' && (($this->stats[$playerId] ?? collect())->where('event_type', 'pf')->first()->count ?? 0) >= self::MAX_PLAYER_FOULS) {
+
+            session()->flash('error', 'Player fouled out.');
+
+            return;
+        }
+        $this->recordEvent($playerId, $stat);
+    }
+    // Helper to check if a player is disqualified
+    public function isDisqualified($playerId): bool
+    {
+        $fouls = $this->stats->get($playerId)?->where('event_type', 'pf')->first()?->count ?? 0;
+        return $fouls >= self::MAX_PLAYER_FOULS;
     }
 
-    public function refreshScores($payload)
+
+
+    protected function recordEvent(int $playerId, string $type)
     {
-        if ($payload['gameId'] != $this->game->id) return;
+
+        $player = Player::findOrFail($playerId);
+
+        $event = ScoreEvent::create([
+
+            'player_id' => $player->id,
+
+            'team_id' => $player->team_id,
+
+            'game_id' => $this->game->id,
+
+            'event_type' => $type,
+
+            'period' => $this->period,
+
+        ]);
+
+        $this->lastActionId = $event->id;
+
+        $this->updateGameScore();
+
+    }
+
+
+
+    public function undoLastAction()
+    {
+
+        if (!$this->lastActionId || $this->isLocked)
+
+            return;
+
+        ScoreEvent::find($this->lastActionId)?->delete();
+
+        $this->updateGameScore();
+
+        $this->lastActionId = null;
+
+    }
+
+
+
+    protected function updateGameScore()
+    {
+
+        $scores = ScoreEvent::where('game_id', $this->game->id)
+
+            ->select('team_id', DB::raw('SUM(CASE WHEN event_type="2pt" THEN 2 WHEN event_type="3pt" THEN 3 WHEN event_type="ft" THEN 1 ELSE 0 END) as total'))
+
+            ->groupBy('team_id')->pluck('total', 'team_id');
+
+        $this->game->update(['score_home' => $scores[$this->game->home_team_id] ?? 0, 'score_away' => $scores[$this->game->away_team_id] ?? 0]);
 
         $this->game->refresh();
-        $this->homeScore = $this->game->score_home ?? 0;
-        $this->awayScore = $this->game->score_away ?? 0;
+
     }
+
+
+
+    public function changePeriod()
+    {
+
+        if ($this->isLocked)
+
+            return;
+
+        $this->period++;
+
+        $this->game->update(['current_period' => $this->period]);
+
+    }
+
+
+
+    public function finalizeGame()
+    {
+
+        if ($this->isLocked)
+
+            return;
+
+        $this->game->update(['status' => 'completed', 'completed_at' => now()]);
+
+        $this->isLocked = true;
+
+    }
+
+
 
     public function render()
     {
-        return view('livewire.statistician.stat-input', [
-            'isLocked' => $this->isLocked,
-            'homeScore' => $this->homeScore,
-            'awayScore' => $this->awayScore,
-            'homeTeamName' => $this->game->homeTeam?->name ?? 'Unknown',
-            'awayTeamName' => $this->game->awayTeam?->name ?? 'Unknown',
-        ]);
+
+        return view('livewire.statistician.stat-input');
+
     }
+
 }

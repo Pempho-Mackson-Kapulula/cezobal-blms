@@ -2,8 +2,8 @@
 
 namespace App\Livewire\TeamManager;
 
-use App\Models\Team;
 use App\Models\User;
+use App\Models\Game;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -14,7 +14,8 @@ use Illuminate\Support\Collection;
 class Dashboard extends Component
 {
     public $team;
-    public Collection $players;
+    public $players;
+    public $nextMatch; // Property for real-time match data
 
     public function mount()
     {
@@ -22,22 +23,44 @@ class Dashboard extends Component
     }
 
     #[On('team-created')]
-    #[On('livewire:navigated')] // Add this listener
-    public function refreshTeam() // Remove the parameter from the method
+    public function refreshTeam()
     {
         $this->loadTeamData();
     }
 
     private function loadTeamData()
     {
-        $user = User::with('team.players', 'team.division')->find(Auth::id());
-        $this->team = $user->team;
+        /** @var User $user */
+        $user = Auth::user();
         
-        $this->players = $this->team ? $this->team->players : new Collection();
+        // Eager load the team, division, and players
+        $this->team = $user->team()->with(['division', 'players'])->first();
+        
+        if ($this->team) {
+            $this->players = $this->team->players;
+
+            // Query the Game model for the single next upcoming match
+            $this->nextMatch = Game::where(function($query) {
+                    $query->where('home_team_id', $this->team->id)
+                          ->orWhere('away_team_id', $this->team->id);
+                })
+                ->where('date', '>=', now()) // 2026 data priority
+                ->where('status', '!=', 'completed')
+                ->orderBy('date', 'asc')
+                ->with(['homeTeam', 'awayTeam', 'court', 'timeSlot'])
+                ->first();
+        } else {
+            $this->players = collect();
+            $this->nextMatch = null;
+        }
     }
 
     public function render()
     {
-        return view('livewire.team-manager.dashboard');
+        return view('livewire.team-manager.dashboard', [
+            'team' => $this->team,
+            'players' => $this->players,
+            'nextMatch' => $this->nextMatch
+        ]);
     }
 }

@@ -71,6 +71,11 @@ class Game extends Model
         return $this->belongsToMany(Player::class, 'game_player');
     }
 
+    public function scoreEvents()
+    {
+        return $this->hasMany(ScoreEvent::class);
+    }
+
     // ✅ Helper: Mark game as completed/finalized
     public function finalizeGame(): void
     {
@@ -85,4 +90,5 @@ class Game extends Model
     {
         return $this->status === 'completed';
     }
+
 }

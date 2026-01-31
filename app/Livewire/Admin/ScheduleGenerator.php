@@ -36,12 +36,16 @@ class ScheduleGenerator extends Component
                 $this->message = "Schedule successfully generated";
             } else {
                 $this->message = "⚠ Could not generate schedule — check if the division has enough teams.";
-               
+
             }
 
         } catch (\Exception $e) {
             $this->message = '❌ Error: ' . $e->getMessage();
         }
+    }
+    public function updatedSelectedDivision()
+    {
+        $this->message = null;
     }
 
     public function render()

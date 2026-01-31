@@ -55,7 +55,7 @@ class SchedulerService
         return $this->generateDivisionSchedule($division, $division->teams->shuffle());
     }
 
-    // ... (generateForDivision and generateForDivisionId methods remain the same)
+    
 
     /**
      * Internal: generate schedule for a specific division given teams.
@@ -69,16 +69,17 @@ class SchedulerService
         // Fetch all courts and time slots (assuming they are fixed resources)
         $courts = Court::all();
         $timeSlots = TimeSlot::all(); // Assuming TimeSlot is ordered by start_time
-
+        
         if ($courts->isEmpty() || $timeSlots->isEmpty()) {
             Log::error("SchedulerService: Missing courts or time slots for {$division->name}");
             return;
         }
 
         // Prepare support staff (same as before)
-      
+
         $statisticians = User::whereIs('statistician')->get();
-        if ($statisticians->isEmpty()) $statisticians = collect([null]);
+        if ($statisticians->isEmpty())
+            $statisticians = collect([null]);
 
         // --- SCHEDULING LOGIC ---
 
@@ -93,36 +94,36 @@ class SchedulerService
         // Loop until all matches are scheduled, or we run out of reasonable dates
         while ($scheduledMatches < $numMatches && $currentDate->diffInMonths($this->weekendStart) < 12) {
             $dateString = $currentDate->toDateString();
-            
+
             // Initialize availability tracking for the current date
             if (!isset($teamDailyAvailability[$dateString])) {
                 $teamDailyAvailability[$dateString] = [];
             }
 
             $dateHasSlotsUsed = false;
-            
+
             // Iterate through ALL Courts
             foreach ($courts as $court) {
-                
+
                 // Then iterate through all TimeSlots for the current court/date
                 foreach ($timeSlots as $slot) {
+
                     
-                    // 🚨 NEW GLOBAL AVAILABILITY CHECK 🚨
                     // Check if this specific court/time slot is ALREADY booked by ANY division
                     $isSlotBooked = Game::where('date', $dateString)
-                                        ->where('time_slot_id', $slot->id)
-                                        ->where('court_id', $court->id)
-                                        ->exists();
+                        ->where('time_slot_id', $slot->id)
+                        ->where('court_id', $court->id)
+                        ->exists();
 
                     if ($isSlotBooked) {
                         // Skip this slot and move to the next one
                         Log::debug("SchedulerService: Court {$court->name} at {$slot->start_time} on {$dateString} is already booked by another division. Skipping.");
-                        continue; 
+                        continue;
                     }
-                    
+
                     // --- Original Team Availability Check Remains ---
                     $foundMatchKey = -1;
-                    
+
                     // Search for the first available match from the division's match list
                     for ($i = 0; $i < count($matches); $i++) {
                         $match = $matches[$i];
@@ -130,9 +131,11 @@ class SchedulerService
                         $awayId = $match['away']->id;
 
                         // Check if either team in the current division has already played on this date
-                        if (!in_array($homeId, $teamDailyAvailability[$dateString]) &&
-                            !in_array($awayId, $teamDailyAvailability[$dateString])) {
-                            
+                        if (
+                            !in_array($homeId, $teamDailyAvailability[$dateString]) &&
+                            !in_array($awayId, $teamDailyAvailability[$dateString])
+                        ) {
+
                             // Found a suitable match!
                             $foundMatchKey = $i;
                             break;
@@ -148,11 +151,11 @@ class SchedulerService
                             'division_id' => $division->id,
                             'home_team_id' => $match['home']->id,
                             'away_team_id' => $match['away']->id,
-                            'date' => $dateString,
                             'time_slot_id' => $slot->id,
                             'court_id' => $court->id,
-                            'statistician_id' => $stat ? $stat->id : null,
-                            'status' => 'scheduled',
+                            'statistician_id' => $stat?->id,
+                            // Dynamic logic goes here, where variables like $dateString exist
+                            'date' => \Carbon\Carbon::parse($dateString . ' ' . $slot->start_time),
                         ]);
 
                         // --- Update tracking and rotate staff ---
@@ -160,7 +163,7 @@ class SchedulerService
                         // 1. Mark teams as played on this date
                         $teamDailyAvailability[$dateString][] = $match['home']->id;
                         $teamDailyAvailability[$dateString][] = $match['away']->id;
-                        
+
                         // 2. Remove match from the division's list
                         array_splice($matches, $foundMatchKey, 1);
 
@@ -169,12 +172,10 @@ class SchedulerService
                         $scoreIndex++;
                         $statIndex++;
                         $dateHasSlotsUsed = true;
-                    } 
-                    // If $foundMatchKey is -1, it means all teams in *this division* have played for the day, 
-                    // so we move to the next time slot/court.
+                    }
                 } // end time slot loop
             } // end court loop
-            
+
             // Advance to the next weekend (Saturday)
             if ($dateHasSlotsUsed || $currentDate->equalTo($this->weekendStart)) {
                 $currentDate = $currentDate->addDay()->next('Saturday');
@@ -195,7 +196,6 @@ class SchedulerService
         }
     }
 
-    // ... (generateDoubleRoundRobin method remains the same)
     /**
      * Build double round-robin match list.
      * Returns array of ['home' => Team, 'away' => Team]
@@ -211,7 +211,6 @@ class SchedulerService
                 $matches[] = ['home' => $teams[$i], 'away' => $teams[$j]];
             }
         }
-
         // Double round robin: add swapped fixtures
         $doubleMatches = [];
         foreach ($matches as $m) {

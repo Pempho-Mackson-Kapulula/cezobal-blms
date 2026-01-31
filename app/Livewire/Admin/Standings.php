@@ -14,16 +14,11 @@ class Standings extends Component
 
     public function mount()
     {
-        // Load all divisions
         $this->divisions = Division::all();
-
-        // Default to first division if available
         $this->selectedDivision = $this->divisions->first()?->id;
-
         $this->loadStandings();
     }
 
-    // Called automatically when the dropdown changes
     public function updatedSelectedDivision($value)
     {
         $this->loadStandings();
@@ -35,21 +30,24 @@ class Standings extends Component
             $this->standings = [];
             return;
         }
-
         $teams = Team::where('division_id', $this->selectedDivision)->get();
-
         $this->standings = $teams->map(function ($team) {
             $homeGames = $team->homeGames()->where('status', 'completed')->get();
             $awayGames = $team->awayGames()->where('status', 'completed')->get();
 
-            $wins = $homeGames->where('score_home', '>', 'score_away')->count()
-                  + $awayGames->where('score_away', '>', 'score_home')->count();
+            // --- Calculate wins and losses correctly ---
+            $wins = $homeGames->filter(callback: fn($g) => (int) $g->score_home > (int) $g->score_away)->count()
+                + $awayGames->filter(fn($g) => (int) $g->score_away > (int) $g->score_home)->count();
 
-            $losses = $homeGames->where('score_home', '<', 'score_away')->count()
-                   + $awayGames->where('score_away', '<', 'score_home')->count();
+            $losses = $homeGames->filter(fn($g) => (int) $g->score_home < (int) $g->score_away)->count()
+                + $awayGames->filter(fn($g) => (int) $g->score_away < (int) $g->score_home)->count();
 
+            // --- Points For / Against ---
             $pointsFor = $homeGames->sum('score_home') + $awayGames->sum('score_away');
             $pointsAgainst = $homeGames->sum('score_away') + $awayGames->sum('score_home');
+
+            // --- League Points Formula (2 for win, 1 for loss) ---
+            $leaguePoints = ($wins * 2) + ($losses * 1);
 
             return [
                 'team' => $team->name,
@@ -59,12 +57,18 @@ class Standings extends Component
                 'points_for' => $pointsFor,
                 'points_against' => $pointsAgainst,
                 'point_diff' => $pointsFor - $pointsAgainst,
-                'league_points' => $wins * 2,
+                'league_points' => $leaguePoints,
             ];
         })
-        ->sortByDesc('league_points')
-        ->values()
-        ->all();
+            ->sort(function ($a, $b) {
+                // Sort by league points first, then by point diff
+                if ($b['league_points'] === $a['league_points']) {
+                    return $b['point_diff'] <=> $a['point_diff'];
+                }
+                return $b['league_points'] <=> $a['league_points'];
+            })
+            ->values()
+            ->all();
     }
 
     public function render()

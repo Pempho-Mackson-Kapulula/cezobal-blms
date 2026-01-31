@@ -1,104 +1,125 @@
-<div class="p-4 sm:p-6 lg:p-8 space-y-8 bg-zinc-950 min-h-screen text-zinc-100">
-
-{{-- Main Page Title --}}
-<div class="border-b-4 border-red-600 pb-3">
-    <h1 class="text-4xl sm:text-5xl font-extrabold text-red-500 tracking-tight">
-        {{ $divisions->firstWhere('id', $selectedDivision)?->name ?? 'League' }} Standings
-    </h1>
-    <p class="text-zinc-400 mt-1 text-lg">Current league table and division rankings, sorted by League Points.</p>
-</div>
-
-<!-- Division Selector Card -->
-<div class="bg-zinc-900 p-5 rounded-xl shadow-2xl border border-zinc-800/80">
-    <div class="flex flex-wrap items-center gap-6">
+<div class="p-4 sm:p-8 bg-zinc-950 min-h-screen font-sans text-zinc-100">
+    
+    <div class="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b-2 border-zinc-900 pb-8">
         <div>
-            <label for="division-select" class="block text-sm font-semibold uppercase tracking-wider text-red-400 mb-1">
-                Select Division
-            </label>
-            <select wire:model.live="selectedDivision"
-                    id="division-select"
-                    class="block w-full sm:w-64 rounded-xl border-2 border-red-500/50 bg-zinc-800 text-zinc-100 shadow-lg
-                           focus:border-red-500 focus:ring-4 focus:ring-red-500/30 transition duration-300 ease-in-out py-2 px-3">
-                @foreach($divisions as $division)
-                    <option value="{{ $division->id }}">{{ $division->name }}</option>
-                @endforeach
-            </select>
+            <h1 class="text-5xl font-black uppercase tracking-tighter italic leading-none">
+                LEAGUE <span class="text-red-600">STANDINGS</span>
+            </h1>
+            <p class="text-zinc-500 text-xs font-black uppercase tracking-[0.4em] mt-3">
+                {{ $divisions->firstWhere('id', $selectedDivision)?->name ?? 'Selection Required' }} // Division Rankings
+            </p>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-red-500 ml-1">Switch Division</label>
+            <div class="relative">
+                <select wire:model.live="selectedDivision"
+                    class="appearance-none bg-zinc-900 border-2 border-zinc-800 rounded-2xl px-6 py-3 pr-12 text-sm font-black uppercase tracking-tight text-white focus:border-red-600 focus:ring-0 transition-all cursor-pointer">
+                    @foreach($divisions as $division)
+                        <option value="{{ $division->id }}">{{ $division->name }}</option>
+                    @endforeach
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-red-600">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Standings Table Container -->
-<div class="mt-8">
-    <h2 class="text-2xl font-bold text-zinc-200 mb-4 border-l-4 border-red-600 pl-3">League Table</h2>
-
-    <div class="overflow-x-auto rounded-xl shadow-2xl border border-zinc-800/80">
+    @if(count($standings) > 0)
+    <div class="max-w-7xl mx-auto space-y-12">
         
-        @if(count($standings) > 0)
-        <table class="min-w-full table-auto text-sm text-zinc-100 divide-y divide-zinc-800/50">
-            {{-- Table Header --}}
-            <thead class="bg-zinc-800 sticky top-0 z-10">
-                <tr>
-                    <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-red-400">Rank</th>
-                    <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-red-500">Team</th>
-                    <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-red-400">GP</th>
-                    <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-red-400">W</th>
-                    <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-red-400">L</th>
-                    <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-red-400">PF</th>
-                    <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-red-400">PA</th>
-                    <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-red-400">Diff</th>
-                    <th class="px-5 py-4 text-center text-xs font-bold uppercase tracking-wider text-red-500">Points</th>
-                </tr>
-            </thead>
-
-            {{-- Table Body --}}
-            <tbody class="bg-zinc-900 divide-y divide-zinc-800/50">
-                @foreach($standings as $index => $team)
-                @php
-                    // Highlight top 2 teams with a red accent background
-                    $isTopTeam = $index < 2;
-                    // Use alternating rows for the rest, and stronger accent for top teams
-                    $rowClass = $isTopTeam ? 'bg-red-900/20 hover:bg-red-900/30 font-bold' : 'odd:bg-zinc-900 even:bg-zinc-800/50 hover:bg-zinc-800';
-                    $rankClass = $isTopTeam ? 'text-red-400 font-extrabold' : 'text-zinc-300 font-bold';
-                    $teamNameClass = $isTopTeam ? 'text-red-300 font-extrabold' : 'text-white font-bold';
-                @endphp
-                <tr class="transition duration-300 ease-in-out {{ $rowClass }}">
-                    {{-- Rank --}}
-                    <td class="px-5 py-3 text-center text-lg {{ $rankClass }}">
-                        {{ $index + 1 }}
-                    </td>
-                    {{-- Team Name --}}
-                    <td class="px-5 py-3 text-left tracking-wide {{ $teamNameClass }}">
-                        {{ $team['team'] }}
-                    </td>
-                    {{-- Other Stats --}}
-                    <td class="px-5 py-3 text-center text-zinc-300">{{ $team['played'] }}</td>
-                    <td class="px-5 py-3 text-center font-semibold text-green-400">{{ $team['wins'] }}</td>
-                    <td class="px-5 py-3 text-center font-semibold text-red-400">{{ $team['losses'] }}</td>
-                    <td class="px-5 py-3 text-center">{{ $team['points_for'] }}</td>
-                    <td class="px-5 py-3 text-center">{{ $team['points_against'] }}</td>
-                    {{-- Point Differential --}}
-                    <td class="px-5 py-3 text-center font-medium {{ $team['point_diff'] > 0 ? 'text-green-300' : ($team['point_diff'] < 0 ? 'text-red-300' : 'text-zinc-400') }}">
-                        {{ $team['point_diff'] > 0 ? '+' : '' }}{{ $team['point_diff'] }}
-                    </td>
-                    {{-- League Points --}}
-                    <td class="px-5 py-3 text-center font-extrabold text-xl text-red-400 bg-zinc-800/50">
-                        {{ $team['league_points'] }}
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-        @else
-            <div class="text-center text-zinc-500 py-12 bg-zinc-900 rounded-xl">
-                <svg class="mx-auto h-12 w-12 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                <h3 class="mt-2 text-lg font-medium text-zinc-300">No Teams Found</h3>
-                <p class="mt-1 text-sm text-zinc-500">
-                    Please select a division or ensure teams have been added and completed games have been recorded.
-                </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            @foreach(collect($standings)->take(3) as $index => $team)
+            <div class="relative group">
+                <div class="absolute -top-4 -left-2 text-7xl font-black italic text-zinc-900/50 group-hover:text-red-600/20 transition-colors z-0">
+                    #{{ $index + 1 }}
+                </div>
+                
+                <div class="relative z-10 bg-zinc-900 border border-zinc-800 p-6 rounded-3xl group-hover:border-red-600/50 transition-all shadow-2xl">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-xl font-black uppercase tracking-tighter italic text-white leading-tight">
+                            {{ $team['team'] }}
+                        </h3>
+                        <span class="text-2xl font-black text-red-600 italic">{{ $team['league_points'] }} <span class="text-[10px] uppercase not-italic text-zinc-500">PTS</span></span>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-2 border-t border-zinc-800 pt-4 mt-2">
+                        <div class="text-center">
+                            <p class="text-[9px] font-black uppercase text-zinc-500">Record</p>
+                            <p class="text-xs font-bold text-white">{{ $team['wins'] }}-{{ $team['losses'] }}</p>
+                        </div>
+                        <div class="text-center border-x border-zinc-800">
+                            <p class="text-[9px] font-black uppercase text-zinc-500">Diff</p>
+                            <p class="text-xs font-bold {{ $team['point_diff'] >= 0 ? 'text-emerald-500' : 'text-red-500' }}">
+                                {{ $team['point_diff'] > 0 ? '+' : '' }}{{ $team['point_diff'] }}
+                            </p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[9px] font-black uppercase text-zinc-500">GP</p>
+                            <p class="text-xs font-bold text-white">{{ $team['played'] }}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        @endif
+            @endforeach
+        </div>
+
+        <div class="bg-zinc-900 rounded-3xl border border-zinc-800 overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-black/50 border-b border-zinc-800">
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">Rank</th>
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-red-500">Club</th>
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">GP</th>
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">W</th>
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">L</th>
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">PF</th>
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">PA</th>
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-zinc-500 text-center">DIFF</th>
+                            <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-red-500 text-center bg-red-600/5">PTS</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-800/50">
+                        @foreach($standings as $index => $team)
+                        <tr class="group hover:bg-black/40 transition-colors {{ $index < 2 ? 'bg-red-600/[0.02]' : '' }}">
+                            <td class="px-6 py-4 text-center">
+                                <span class="text-sm font-black italic {{ $index < 2 ? 'text-red-600' : 'text-zinc-700' }}">
+                                    {{ $index + 1 }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-black uppercase tracking-tight text-white group-hover:text-red-500 transition-colors">
+                                    {{ $team['team'] }}
+                                </p>
+                            </td>
+                            <td class="px-6 py-4 text-center text-xs font-bold text-zinc-400">{{ $team['played'] }}</td>
+                            <td class="px-6 py-4 text-center text-xs font-bold text-emerald-500">{{ $team['wins'] }}</td>
+                            <td class="px-6 py-4 text-center text-xs font-bold text-red-500">{{ $team['losses'] }}</td>
+                            <td class="px-6 py-4 text-center text-xs font-bold text-zinc-400">{{ $team['points_for'] }}</td>
+                            <td class="px-6 py-4 text-center text-xs font-bold text-zinc-400">{{ $team['points_against'] }}</td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="text-xs font-black {{ $team['point_diff'] >= 0 ? 'text-emerald-500' : 'text-red-500' }}">
+                                    {{ $team['point_diff'] > 0 ? '+' : '' }}{{ $team['point_diff'] }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-center bg-red-600/5">
+                                <span class="text-lg font-black italic text-red-500 leading-none">
+                                    {{ $team['league_points'] }}
+                                </span>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-</div>
-
-
+    @else
+        <div class="max-w-7xl mx-auto py-32 bg-zinc-900 rounded-3xl border-4 border-dashed border-zinc-800 text-center">
+            <svg class="w-16 h-16 mx-auto mb-4 text-zinc-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            <p class="text-xs font-black uppercase tracking-[0.4em] text-zinc-700">No data available for this division</p>
+        </div>
+    @endif
 </div>

@@ -6,12 +6,14 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use App\Models\Division;
 use App\Models\Court;
+use Faker\Factory as Faker;
 
 class TeamSeeder extends Seeder
 {
     public function run()
     {
-        $divisions = Division::all()->keyBy('name'); // key by name
+        $faker = Faker::create();
+        $divisions = Division::all()->keyBy('name');
         $courts = Court::all();
 
         if ($courts->isEmpty()) {
@@ -19,7 +21,6 @@ class TeamSeeder extends Seeder
             return;
         }
 
-        // Cycle through courts
         $courtIndex = 0;
         $pickCourt = function () use ($courts, &$courtIndex) {
             $court = $courts[$courtIndex % $courts->count()];
@@ -93,27 +94,68 @@ class TeamSeeder extends Seeder
                 continue;
 
             foreach ($teams as $teamName) {
-                // Use insertGetId to get the team ID
                 $teamId = DB::table('teams')->insertGetId([
                     'name' => $teamName,
                     'division_id' => $division->id,
                     'home_court_id' => $pickCourt(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
 
-                // Seed players for each team
+                // Seed players with realistic 2026 profiles
+                // Seed players with realistic 2026 profiles
                 for ($i = 1; $i <= rand(8, 12); $i++) {
+                    // 1. Determine gender and league type
+                    $gender = str_contains($divisionName, "Women's") ? 'female' : 'male';
+                    $isMens = ($gender === 'male');
+
+                    // 2. Build clean name
+                    $firstName = $faker->firstName($gender);
+                    $lastName = $faker->lastName;
+                    $fullName = "{$firstName} {$lastName}";
+
+                    // 3. Generate physical attributes
+                    $heightInches = $isMens ? $faker->numberBetween(72, 82) : $faker->numberBetween(66, 75);
+                    $height = floor($heightInches / 12) . "'" . ($heightInches % 12) . '"';
+                    $weight = ($isMens ? $faker->numberBetween(50, 100) : $faker->numberBetween(56, 100)) . " kg";
+
+                    // 4. Generate Basketball Background/History
+                    $history = $faker->randomElement([
+                        "a former standout from the Lilongwe youth circuits",
+                        "a seasoned veteran who previously played in the regional championships",
+                        "a rising prospect who transitioned from the U18 summer league",
+                        "an athletic marvel known for dominant play in the inter-college games",
+                        "a tactical specialist with a deep understanding of the CEZOBAL system"
+                    ]);
+
+                    $playingStyle = $faker->randomElement([
+                        "provides elite rim protection and interior scoring.",
+                        "excels at floor spacing with a lethal perimeter shot.",
+                        "is a lockdown defender capable of guarding multiple positions.",
+                        "orchestrates the offense with high-level playmaking and vision.",
+                        "is a high-energy transition threat who thrives in the open court."
+                    ]);
+
+                    // 5. Combine everything into the single 'bio' column
+                    $customBio = "Standing {$height} and weighing {$weight}, {$firstName} is {$history}. " .
+                        "Currently playing for {$teamName}, this athlete {$playingStyle} " .
+                        "Expected to be a cornerstone for the team throughout the 2026 campaign.";
+
                     DB::table('players')->insert([
-                        'name' => $teamName . ' Player ' . $i,
+                        'name' => $fullName,
                         'team_id' => $teamId,
-                        'position' => null,
-                        'jersey_number' => $i, // Assign 1..N
+                        'position' => $faker->randomElement(['PG', 'SG', 'SF', 'PF', 'C']),
+                        'jersey_number' => $faker->unique(true)->numberBetween(0, 99),
+                        'bio' => $customBio,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 }
+
 
             }
         }
 
-
-        $this->command->info("Teams seeded successfully.");
+        $this->command->info("2026 Teams and Players seeded with realistic profiles successfully.");
     }
 }

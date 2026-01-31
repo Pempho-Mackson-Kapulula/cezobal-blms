@@ -9,7 +9,14 @@ class Player extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'team_id', 'position', 'fouls'];
+    protected $fillable = [
+        'name', 
+        'team_id', 
+        'position', 
+        'fouls',
+        'bio', // Added
+        'jersey_number' // Added
+    ];
 
     public function team()
     {
@@ -18,6 +25,7 @@ class Player extends Model
 
     public function games()
     {
+        // Assuming you have a pivot table 'game_player'
         return $this->belongsToMany(Game::class, 'game_player');
     }
 }

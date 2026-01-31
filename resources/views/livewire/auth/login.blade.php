@@ -4,7 +4,6 @@ use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -13,7 +12,6 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 use Silber\Bouncer\BouncerFacade as Bouncer;
-use App\Services\DashboardService;
 
 new #[Layout('components.layouts.auth')] class extends Component {
     #[Validate('required|string|email')]
@@ -30,19 +28,24 @@ new #[Layout('components.layouts.auth')] class extends Component {
     public function login(): void
     {
         $this->validate();
-
         $this->ensureIsNotRateLimited();
 
         $user = $this->validateCredentials();
 
-        // 🔒 Block login for users who are not yet approved
-        if ($user->status !== 'active') {
-            throw ValidationException::withMessages([
-                'email' => __('Your account is pending admin approval.'),
-            ]);
+        // 🔒 Redirect users based on approval status
+        if ($user->isRejected()) {
+            Auth::logout();
+            $this->redirect(route('approval.rejected'), navigate: true);
+            return;
         }
 
-        // ✅ Log in the user
+        if (!$user->isApproved()) {
+            Auth::logout();
+            $this->redirect(route('approval.pending'), navigate: true);
+            return;
+        }
+
+        // ✅ Log in approved users
         Auth::login($user, $this->remember);
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
@@ -92,7 +95,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
         }
 
         event(new Lockout(request()));
-
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([

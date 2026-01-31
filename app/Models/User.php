@@ -26,8 +26,13 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'status',           // Required for isPending() / isApproved() logic
+        'approved_at',      // Required for approval timestamp
+        'approved_by',      // Required to track which admin approved
+        'rejected_at',      // Required for rejection timestamp
+        'rejected_by',      // Required to track which admin rejected
+        'rejection_reason', // Required for the custom rejection reason
     ];
-
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -72,5 +77,30 @@ class User extends Authenticatable
         return $this->hasMany(Game::class, 'statistician_id');
     }
 
+    /* ---------------------- Approval Helper Methods ---------------------- */
+
+    /**
+     * Check if the user is approved (active)
+     */
+    public function isApproved(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /**
+     * Check if the user has been rejected
+     */
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
+
+    /**
+     * Check if the user is pending approval
+     */
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
 
 }
